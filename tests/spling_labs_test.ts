@@ -1,11 +1,9 @@
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
 import { SplingLabsTest } from "../target/types/spling_labs_test";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, AccountLayout, getAccount } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { LAMPORTS_PER_SOL, PublicKey} from "@solana/web3.js";
 import { BN } from "bn.js";
-import { publicKey } from "@project-serum/anchor/dist/cjs/utils";
-import { assert, Assertion } from "chai";
 
 describe("spling_labs_test", () => {
   // Configure the client to use the local cluster.
@@ -18,7 +16,6 @@ describe("spling_labs_test", () => {
   const mint = anchor.web3.Keypair.generate();
   const tokenAccount = anchor.web3.Keypair.generate();
   const treasury = anchor.web3.Keypair.generate();
-
 
   it("setup", async () => {
     const payer = await provider.connection.requestAirdrop(fromWalletA.publicKey, LAMPORTS_PER_SOL * 5);
@@ -49,7 +46,8 @@ describe("spling_labs_test", () => {
     );
     console.log('State pda', statePubKey);
 
-    await program.methods.mintToken(new BN(1000)).accounts({
+    await program.methods.mintToken(new BN(1000))
+    .accounts({
        mint: mint.publicKey,
        tokenProgram: TOKEN_PROGRAM_ID,
        tokenAccount: tokenAccount.publicKey,
@@ -58,19 +56,21 @@ describe("spling_labs_test", () => {
        state: statePubKey,
        systemProgram: anchor.web3.SystemProgram.programId,
        rent: anchor.web3.SYSVAR_RENT_PUBKEY
-    }).signers([fromWalletA, tokenAccount, treasury]).rpc();
+    })
+    .signers([fromWalletA, tokenAccount, treasury])
+    .rpc();
 
     let tokenAccountBalance = await getAccountTokenBalance(provider, tokenAccount.publicKey);
     console.log("Token balance:", tokenAccountBalance);
     console.log("Treasury balance", await provider.connection.getBalance(treasury.publicKey));
 
-    let stateAccount = await program.account.state.fetch(statePubKey);
-    console.log("State Counter is:", stateAccount.counter);
+    let fetchedStateAccount = await program.account.state.fetch(statePubKey);
+    console.log("State Counter is:", fetchedStateAccount.counter);
   });
   
 
 
-
+  // ---- Helper functions ---- 
   const checkTransactionIsOK = async function(provider: anchor.Provider, transaction: TransactionSignature): Promise<RpcResponseAndContext<SignatureResult>> { 
     const {blockhash, lastValidBlockHeight} = await provider.connection.getLatestBlockhash();
     return await provider.connection.confirmTransaction({

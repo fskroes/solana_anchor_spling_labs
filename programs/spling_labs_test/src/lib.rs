@@ -48,7 +48,7 @@ pub mod spling_labs_test {
         state.treasury = ctx.accounts.treasury.key();
         
         
-        // Burn one TokenA token and increase counter by 1 and state size by 10kb
+        // Burn one TokenA token
         let burn_cpi_accounts = Burn {
             mint: ctx.accounts.mint.to_account_info(),
             from: ctx.accounts.token_account.to_account_info(),
@@ -61,7 +61,25 @@ pub mod spling_labs_test {
         // Execute anchor's helper function to burn tokens
         token::burn(burn_cpi_ctx, 1)?;
 
+        // Increase counter by 1
         state.counter = state.counter.saturating_add(1);
+
+        //  Realoc account size by 10kb
+        let new_size = ctx.accounts.state.to_account_info().data.borrow().len() + 32;
+        let rent = Rent::get()?;
+        let new_minimum_balance = rent.minimum_balance(new_size);
+
+        let lamports_diff = new_minimum_balance.saturating_sub(ctx.accounts.state.to_account_info().lamports());
+        invoke(
+            &system_instruction::transfer(ctx.accounts.authority.key, &ctx.accounts.state.key(), lamports_diff), 
+            &[
+                ctx.accounts.authority.to_account_info(),
+                ctx.accounts.state.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+
+        ctx.accounts.state.to_account_info().realloc(new_size, false)?;
 
         Ok(())
     }
@@ -114,9 +132,9 @@ pub struct MintToken<'info> {
    pub treasury: AccountInfo<'info>,
    /// CHECK: Save state of program
    #[account(
-    init, 
-    payer = authority, 
-    space = 8 + 100, 
+    init_if_needed,
+    payer = authority,
+    space = 8 + 100,
     seeds=[b"state".as_ref(), authority.key().as_ref()],
     bump
    )]
