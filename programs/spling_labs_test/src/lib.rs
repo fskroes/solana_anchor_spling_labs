@@ -1,13 +1,12 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, MintTo};
+use anchor_spl::token::{Mint, Token, MintTo, mint_to, Approve, TokenAccount};
+use anchor_spl::{token};
 
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod spling_labs_test {
-    use anchor_spl::token::mint_to;
-
     use super::*;
 
     pub fn initialize_mint(ctx: Context<InitializeMint>) -> Result<()> {
@@ -15,7 +14,6 @@ pub mod spling_labs_test {
     }
 
     pub fn mint_token(ctx: Context<MintToken>, amount: u64) -> Result<()> {
-        
         // Create the MintTo struct for our context
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mint.to_account_info(),
@@ -23,27 +21,15 @@ pub mod spling_labs_test {
             authority: ctx.accounts.authority.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
+        // Create the CpiContext we need for the request
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-        // Execute Anchor's helper function to mint tokens
+        // Execute anchor's helper function to mint tokens
         mint_to(cpi_ctx, amount)?;
-
-
-        // Function to tranfer funds from Payer to PDA (TODO)
-        // let instruction = &system_instruction::transfer(
-        //     &ctx.accounts.bidder.key(),
-        //     &ctx.accounts.treasury.key(),
-        //     raised_by,
-        // );
-        // let account_info = &[
-        //     ctx.accounts.bidder.to_account_info(),
-        //     ctx.accounts.treasury.clone()
-        // ];
-        // invoke(instruction, account_info)?;
-
-
+     
         Ok(())
     }
+
 }
 
 
@@ -71,29 +57,18 @@ pub struct InitializeMint<'info> {
 
 #[derive(Accounts)]
 pub struct MintToken<'info> {
-    
-    /// CHECK: this is the token that we want to mint
-    #[account(mut)]
-    pub mint: Account<'info, Mint>,
-    pub token_program: Program<'info, Token>,
-   /// CHECK: This is the token account that we want to mint tokens to
+   /// CHECK: This is the token that we want to mint
    #[account(mut)]
-   pub token_account: AccountInfo<'info>,
+   pub mint: Account<'info, Mint>,
+   pub token_program: Program<'info, Token>,
+   /// CHECK: This is the token account that we want to mint tokens to
+   #[account(init, payer = authority, token::mint = mint, token::authority = authority)]
+   pub token_account: Account<'info, TokenAccount>,
    /// CHECK: the authority of the mint account
+   #[account(mut)]
    pub authority: Signer<'info>,  
-}
 
-
-#[account]
-#[derive(Default)]
-pub struct State {
-    pub counter: u8,
-
-    pub user_sending: Pubkey,
-
-    pub mint_of_token_being_sent: Pubkey,
-
-    pub escrow_wallet: Pubkey,
-
-    pub amount_tokens: u64,
+   pub system_program: Program<'info, System>,
+   ///CHECK: This is not dangerous because we don't read or write from this account
+   pub rent: AccountInfo<'info>,
 }

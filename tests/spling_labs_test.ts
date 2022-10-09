@@ -12,11 +12,13 @@ describe("spling_labs_test", () => {
 
   const program = anchor.workspace.SplingLabsTest as Program<SplingLabsTest>;
 
-  const fromWallet = anchor.web3.Keypair.generate()
-  const mint = anchor.web3.Keypair.generate()
+  const fromWalletA = anchor.web3.Keypair.generate();
+  const mint = anchor.web3.Keypair.generate();
+  const tokenAccount = anchor.web3.Keypair.generate();
+
 
   it("setup", async () => {
-    const payer = await provider.connection.requestAirdrop(fromWallet.publicKey, LAMPORTS_PER_SOL * 5);
+    const payer = await provider.connection.requestAirdrop(fromWalletA.publicKey, LAMPORTS_PER_SOL * 5);
     await checkTransactionIsOK(provider, payer);
   });
 
@@ -26,12 +28,12 @@ describe("spling_labs_test", () => {
     const tx = await program.methods.initializeMint()
     .accounts({
       mint: mint.publicKey,
-      payer: fromWallet.publicKey,
+      payer: fromWalletA.publicKey,
       systemProgram: anchor.web3.SystemProgram.programId,
       tokenProgram: TOKEN_PROGRAM_ID,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY
      })
-     .signers([fromWallet, mint])
+     .signers([fromWalletA, mint])
      .rpc();
 
      checkTransactionIsOK(provider, tx);
@@ -39,20 +41,14 @@ describe("spling_labs_test", () => {
 
   it("Actually mint the tokens", async () => {
 
-    let associatedTokenAccount = await getAssociatedTokenAddress(
-      mint.publicKey,
-      fromWallet.publicKey,
-    );
-
-    await program.methods.mintToken(new BN(100))
-    .accounts({
-      mint: mint.publicKey,
-      tokenProgram: TOKEN_PROGRAM_ID,
-      tokenAccount: associatedTokenAccount,
-      authority: fromWallet.publicKey,
-    })
-    .signers([fromWallet])
-    .rpc();
+    await program.methods.mintToken(new BN(100)).accounts({
+       mint: mint.publicKey,
+       tokenProgram: TOKEN_PROGRAM_ID,
+       tokenAccount: tokenAccount.publicKey,
+       authority:fromWalletA.publicKey,
+       systemProgram: anchor.web3.SystemProgram.programId,
+       rent: anchor.web3.SYSVAR_RENT_PUBKEY
+    }).signers([fromWalletA, tokenAccount]).rpc();
 
   });
   
