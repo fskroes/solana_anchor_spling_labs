@@ -2,8 +2,10 @@ import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
 import { SplingLabsTest } from "../target/types/spling_labs_test";
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
-import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { LAMPORTS_PER_SOL, PublicKey} from "@solana/web3.js";
 import { BN } from "bn.js";
+import { publicKey } from "@project-serum/anchor/dist/cjs/utils";
+import { assert, Assertion } from "chai";
 
 describe("spling_labs_test", () => {
   // Configure the client to use the local cluster.
@@ -15,6 +17,7 @@ describe("spling_labs_test", () => {
   const fromWalletA = anchor.web3.Keypair.generate();
   const mint = anchor.web3.Keypair.generate();
   const tokenAccount = anchor.web3.Keypair.generate();
+  const treasury = anchor.web3.Keypair.generate();
 
 
   it("setup", async () => {
@@ -41,15 +44,19 @@ describe("spling_labs_test", () => {
 
   it("Actually mint the tokens", async () => {
 
-    await program.methods.mintToken(new BN(100)).accounts({
+    await program.methods.mintToken(new BN(1000)).accounts({
        mint: mint.publicKey,
        tokenProgram: TOKEN_PROGRAM_ID,
        tokenAccount: tokenAccount.publicKey,
-       authority:fromWalletA.publicKey,
+       authority: fromWalletA.publicKey,
+       treasury: treasury.publicKey,
        systemProgram: anchor.web3.SystemProgram.programId,
        rent: anchor.web3.SYSVAR_RENT_PUBKEY
-    }).signers([fromWalletA, tokenAccount]).rpc();
+    }).signers([fromWalletA, tokenAccount, treasury]).rpc();
 
+    let tokenAccountBalance = await getAccountTokenBalance(provider, tokenAccount.publicKey);
+    console.log("Token balance:", tokenAccountBalance);
+    console.log("potato", await provider.connection.getBalance(treasury.publicKey));
   });
   
 
@@ -60,6 +67,12 @@ describe("spling_labs_test", () => {
       lastValidBlockHeight,
       signature: transaction
     });
+  }
+
+  const getAccountTokenBalance = async function(provider: anchor.Provider, account_pub_key: PublicKey): Promise<number> {
+    return parseInt(
+      (await provider.connection.getTokenAccountBalance(account_pub_key)).value.amount
+    );
   }
 
 });
