@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, MintTo, mint_to, Approve, TokenAccount, Transfer};
+use anchor_spl::token::{Mint, Token, MintTo, mint_to, TokenAccount, Burn};
 use anchor_spl::{token};
 use anchor_lang::solana_program::system_instruction;
 use anchor_lang::solana_program::program::invoke;
@@ -32,19 +32,41 @@ pub mod spling_labs_test {
         mint_to(cpi_ctx, amount)?;
 
         // Tranfer 0.1 SOL as payment to mint the 1000 tokens
-        let instruction = &system_instruction::transfer(
+        let transfer_instruction = &system_instruction::transfer(
             &ctx.accounts.authority.key(),
             &ctx.accounts.treasury.key(),
             sol_to_lamports(0.1),
         );
-        let account_info = &[
+        let transfer_account_info = &[
             ctx.accounts.authority.to_account_info(),
             ctx.accounts.treasury.clone()
         ];
-        invoke(instruction, account_info)?;
+        invoke(transfer_instruction, transfer_account_info)?;
      
+
+        let state = &mut ctx.accounts.state;
+        state.treasury = ctx.accounts.treasury.key();
+        
+        
+        // Burn one TokenA token and increase counter by 1 and state size by 10kb
+        let burn_cpi_accounts = Burn {
+            mint: ctx.accounts.mint.to_account_info(),
+            from: ctx.accounts.token_account.to_account_info(),
+            authority: ctx.accounts.authority.to_account_info(),
+        };
+        let burn_cpi_program = ctx.accounts.token_program.to_account_info();
+        // Create the CpiContext we need for the request
+        let burn_cpi_ctx = CpiContext::new(burn_cpi_program, burn_cpi_accounts);
+
+        // Execute anchor's helper function to burn tokens
+        token::burn(burn_cpi_ctx, 1)?;
+
+        state.counter = state.counter.saturating_add(1);
+
         Ok(())
     }
+
+    
 
 }
 
@@ -90,7 +112,23 @@ pub struct MintToken<'info> {
    #[account(init, payer = authority, space = 0)]
    /// CHECK:
    pub treasury: AccountInfo<'info>,
+   /// CHECK: Save state of program
+   #[account(
+    init, 
+    payer = authority, 
+    space = 8 + 100, 
+    seeds=[b"state".as_ref(), authority.key().as_ref()],
+    bump
+   )]
+   pub state: Account<'info, State>,
    pub system_program: Program<'info, System>,
    ///CHECK: This is not dangerous because we don't read or write from this account
    pub rent: AccountInfo<'info>,
+}
+
+
+#[account]
+pub struct State {
+    pub treasury: Pubkey,
+    pub counter: u64,
 }
