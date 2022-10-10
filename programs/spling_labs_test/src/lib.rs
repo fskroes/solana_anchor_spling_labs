@@ -65,7 +65,7 @@ pub mod spling_labs_test {
         state.counter = state.counter.saturating_add(1);
 
         //  Realoc account size by 10kb
-        let new_size = ctx.accounts.state.to_account_info().data.borrow().len() + 32;
+        let new_size = ctx.accounts.state.to_account_info().data.borrow().len() + 10;
         let rent = Rent::get()?;
         let new_minimum_balance = rent.minimum_balance(new_size);
 
