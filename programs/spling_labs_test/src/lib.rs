@@ -21,7 +21,7 @@ pub mod spling_labs_test {
         // Create the MintTo struct for our context
         let cpi_accounts = MintTo {
             mint: ctx.accounts.mint.to_account_info(),
-            to: ctx.accounts.token_account.to_account_info(),
+            to: ctx.accounts.token_a.to_account_info(),
             authority: ctx.accounts.authority.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
@@ -51,7 +51,7 @@ pub mod spling_labs_test {
         // Burn one TokenA token
         let burn_cpi_accounts = Burn {
             mint: ctx.accounts.mint.to_account_info(),
-            from: ctx.accounts.token_account.to_account_info(),
+            from: ctx.accounts.token_a.to_account_info(),
             authority: ctx.accounts.authority.to_account_info(),
         };
         let burn_cpi_program = ctx.accounts.token_program.to_account_info();
@@ -122,7 +122,7 @@ pub struct MintToken<'info> {
    pub token_program: Program<'info, Token>,
    /// CHECK: This is the token account that we want to mint tokens to
    #[account(init, payer = authority, token::mint = mint, token::authority = authority)]
-   pub token_account: Account<'info, TokenAccount>,
+   pub token_a: Account<'info, TokenAccount>,
    /// CHECK: the authority of the mint account
    #[account(mut)]
    pub authority: Signer<'info>,
@@ -138,7 +138,7 @@ pub struct MintToken<'info> {
     seeds=[b"state".as_ref(), authority.key().as_ref()],
     bump
    )]
-   pub state: Account<'info, State>,
+   pub state: Account<'info, AccountA>,
    pub system_program: Program<'info, System>,
    ///CHECK: This is not dangerous because we don't read or write from this account
    pub rent: AccountInfo<'info>,
@@ -146,7 +146,7 @@ pub struct MintToken<'info> {
 
 
 #[account]
-pub struct State {
+pub struct AccountA {
     pub treasury: Pubkey,
     pub counter: u64,
 }

@@ -14,7 +14,7 @@ describe("spling_labs_test", () => {
 
   const fromWalletA = anchor.web3.Keypair.generate();
   const mint = anchor.web3.Keypair.generate();
-  const tokenAccount = anchor.web3.Keypair.generate();
+  const tokenA = anchor.web3.Keypair.generate();
   const treasury = anchor.web3.Keypair.generate();
 
   it("setup", async () => {
@@ -50,21 +50,21 @@ describe("spling_labs_test", () => {
     .accounts({
        mint: mint.publicKey,
        tokenProgram: TOKEN_PROGRAM_ID,
-       tokenAccount: tokenAccount.publicKey,
+       tokenA: tokenA.publicKey,
        authority: fromWalletA.publicKey,
        treasury: treasury.publicKey,
        state: statePubKey,
        systemProgram: anchor.web3.SystemProgram.programId,
        rent: anchor.web3.SYSVAR_RENT_PUBKEY
     })
-    .signers([fromWalletA, tokenAccount, treasury])
+    .signers([fromWalletA, tokenA, treasury])
     .rpc();
 
-    let tokenAccountBalance = await getAccountTokenBalance(provider, tokenAccount.publicKey);
+    let tokenAccountBalance = await getAccountTokenBalance(provider, tokenA.publicKey);
     console.log("Token balance:", tokenAccountBalance);
     console.log("Treasury balance", await provider.connection.getBalance(treasury.publicKey));
 
-    let fetchedStateAccount = await program.account.state.fetch(statePubKey);
+    let fetchedStateAccount = await program.account.accountA.fetch(statePubKey);
     console.log("State Counter is:", fetchedStateAccount.counter);
   });
   
